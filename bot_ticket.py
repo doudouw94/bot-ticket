@@ -10,9 +10,12 @@ intents.guilds = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-TICKET_CATEGORY_ID = int(os.getenv("TICKET_CATEGORY_ID", 0)) or None
-print(f"DEBUG - ID catégorie chargée : {TICKET_CATEGORY_ID}")
+# ==================== CONFIG ====================
+TICKET_CATEGORY_ID = 1516575212559142994  # ← ID de ta catégorie "vandetta"
 
+print(f"DEBUG - Catégorie Vandetta chargée : {TICKET_CATEGORY_ID}")
+
+# ==================== VIEWS ====================
 class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = [
@@ -24,7 +27,7 @@ class TicketSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        category = self.values[0]
+        value = self.values[0]
         member = interaction.user
         guild = interaction.guild
 
@@ -33,12 +36,9 @@ class TicketSelect(discord.ui.Select):
             "affilie": {"name": "affilie", "emoji": "🤝", "color": 0xffaa00},
             "autre": {"name": "autre-demande", "emoji": "❓", "color": 0x7289da}
         }
-        cfg = config[category]
+        cfg = config[value]
 
         ticket_name = f"{cfg['name']}-{member.name.lower()}"
-
-        # Debug
-        print(f"Création ticket pour {member.name} dans catégorie ID: {TICKET_CATEGORY_ID}")
 
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(read_messages=False),
@@ -46,38 +46,43 @@ class TicketSelect(discord.ui.Select):
             guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True, manage_channels=True)
         }
 
-        category_obj = guild.get_channel(TICKET_CATEGORY_ID) if TICKET_CATEGORY_ID else None
+        category = guild.get_channel(TICKET_CATEGORY_ID) if TICKET_CATEGORY_ID else None
+
         ticket_channel = await guild.create_text_channel(
-            name=ticket_name, 
-            category=category_obj, 
+            name=ticket_name,
+            category=category,
             overwrites=overwrites
         )
 
-        await interaction.followup.send(f"✅ Ticket créé → {ticket_channel.mention}", ephemeral=True)
+        await interaction.followup.send(f"✅ Ton ticket a été créé → {ticket_channel.mention}", ephemeral=True)
 
-        # ... (le reste du code reste le même)
-
-        await ticket_channel.send(embed=discord.Embed(
-            title=f"{cfg['emoji']} Ticket {category.title()}",
-            description=f"Bonjour {member.mention},\nUn staff va te répondre bientôt.",
+        # Message d'accueil
+        embed = discord.Embed(
+            title=f"{cfg['emoji']} Ticket {value.title()}",
+            description=f"Bonjour {member.mention},\nUn membre du staff va te répondre bientôt.",
             color=cfg["color"]
-        ))
+        )
+        await ticket_channel.send(embed=embed)
 
-        if category == "recrutement":
-            await asyncio.sleep(1)
-            await ticket_channel.send(embed=discord.Embed(
+        # Questionnaire Recrutement
+        if value == "recrutement":
+            await asyncio.sleep(1.5)
+            q_embed = discord.Embed(
                 title="📋 Questionnaire Recrutement",
-                description="**Réponds aux questions suivantes :**\n1. Âge ?\n2. Disponibilités ?\n3. Expérience en ville ?\n4. Nom & Prénom IG ?\n5. Heures sur FiveM ?",
+                description="Merci de répondre à toutes les questions :\n\n1. Quel est ton âge ?\n2. Quelles sont tes disponibilités ?\n3. Quelle est ton expérience en ville ?\n4. Quel est ton nom et prénom en ville ?\n5. Combien d'heures as-tu sur FiveM ?",
                 color=0x00ff00
-            ))
+            )
+            await ticket_channel.send(embed=q_embed)
 
-        view = discord.ui.View()
+        # Bouton Fermer
         close_btn = discord.ui.Button(label="Fermer le ticket", style=discord.ButtonStyle.red)
-        async def close(inter: discord.Interaction):
-            await inter.response.send_message("Fermeture dans 5s...", ephemeral=False)
+        async def close_callback(inter: discord.Interaction):
+            await inter.response.send_message("🔒 Fermeture dans 5 secondes...", ephemeral=False)
             await asyncio.sleep(5)
             await ticket_channel.delete()
-        close_btn.callback = close
+        close_btn.callback = close_callback
+
+        view = discord.ui.View()
         view.add_item(close_btn)
         await ticket_channel.send(view=view)
 
@@ -86,16 +91,20 @@ class TicketView(discord.ui.View):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
 
-@bot.tree.command(name="ticket", description="Panneau de tickets")
+# ==================== COMMANDE ====================
+@bot.tree.command(name="ticket", description="Envoie le panneau Centre d'assistance")
 @commands.has_permissions(administrator=True)
-async def ticket_panel(interaction: discord.Interaction):
-    embed = discord.Embed(title="Centre d'assistance", description="Merci de fournir le plus d'informations pour un traitement efficace.", color=0x2b2d31)
+async def ticket(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="Centre d'assistance",
+        description="Merci de fournir le plus d'informations pour un traitement efficace.",
+        color=0x2b2d31
+    )
     await interaction.response.send_message(embed=embed, view=TicketView())
 
 @bot.event
 async def on_ready():
     print(f"✅ {bot.user} est en ligne !")
-    print(f"DEBUG - Catégorie Vandetta ID : {TICKET_CATEGORY_ID}")
     await bot.tree.sync()
 
 bot.run(os.getenv("TOKEN"))
