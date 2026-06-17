@@ -10,10 +10,10 @@ intents.guilds = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# ==================== CONFIG ====================
-TICKET_CATEGORY_ID = 1516575212559142994  # ← ID de ta catégorie "vandetta"
+TICKET_CATEGORY_ID = 1516575212559142994
 
-print(f"DEBUG - Catégorie Vandetta chargée : {TICKET_CATEGORY_ID}")
+# ==================== CONFIG ====================
+STAFF_ROLE_NAME = "tickets"   # ← Nom du rôle que tu as créé
 
 # ==================== VIEWS ====================
 class TicketSelect(discord.ui.Select):
@@ -40,11 +40,18 @@ class TicketSelect(discord.ui.Select):
 
         ticket_name = f"{cfg['name']}-{member.name.lower()}"
 
+        # Récupération du rôle staff
+        staff_role = discord.utils.get(guild.roles, name=STAFF_ROLE_NAME)
+
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(read_messages=False),
             member: discord.PermissionOverwrite(read_messages=True, send_messages=True, view_channel=True),
             guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True, manage_channels=True)
         }
+
+        # Ajout du rôle staff
+        if staff_role:
+            overwrites[staff_role] = discord.PermissionOverwrite(read_messages=True, send_messages=True, view_channel=True)
 
         category = guild.get_channel(TICKET_CATEGORY_ID) if TICKET_CATEGORY_ID else None
 
@@ -56,32 +63,32 @@ class TicketSelect(discord.ui.Select):
 
         await interaction.followup.send(f"✅ Ton ticket a été créé → {ticket_channel.mention}", ephemeral=True)
 
-        # Message d'accueil
         embed = discord.Embed(
             title=f"{cfg['emoji']} Ticket {value.title()}",
             description=f"Bonjour {member.mention},\nUn membre du staff va te répondre bientôt.",
             color=cfg["color"]
         )
+        if staff_role:
+            embed.description += f"\n\n{staff_role.mention} un ticket a été ouvert !"
+        
         await ticket_channel.send(embed=embed)
 
-        # Questionnaire Recrutement
         if value == "recrutement":
             await asyncio.sleep(1.5)
             q_embed = discord.Embed(
                 title="📋 Questionnaire Recrutement",
-                description="Merci de répondre à toutes les questions :\n\n1. Quel est ton âge ?\n2. Quelles sont tes disponibilités ?\n3. Quelle est ton expérience en ville ?\n4. Quel est ton nom et prénom en ville ?\n5. Combien d'heures as-tu sur FiveM ?",
+                description="Merci de répondre à toutes les questions :\n\n1. Âge ?\n2. Disponibilités ?\n3. Expérience en ville ?\n4. Nom & Prénom IG ?\n5. Heures FiveM ?",
                 color=0x00ff00
             )
             await ticket_channel.send(embed=q_embed)
 
-        # Bouton Fermer
+        # Bouton fermer
         close_btn = discord.ui.Button(label="Fermer le ticket", style=discord.ButtonStyle.red)
         async def close_callback(inter: discord.Interaction):
             await inter.response.send_message("🔒 Fermeture dans 5 secondes...", ephemeral=False)
             await asyncio.sleep(5)
             await ticket_channel.delete()
         close_btn.callback = close_callback
-
         view = discord.ui.View()
         view.add_item(close_btn)
         await ticket_channel.send(view=view)
@@ -91,7 +98,6 @@ class TicketView(discord.ui.View):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
 
-# ==================== COMMANDE ====================
 @bot.tree.command(name="ticket", description="Envoie le panneau Centre d'assistance")
 @commands.has_permissions(administrator=True)
 async def ticket(interaction: discord.Interaction):
