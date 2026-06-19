@@ -17,7 +17,7 @@ RECRUTEMENT_ENABLED = True
 AFFILIE_ENABLED = True
 
 
-# ==================== BOUTON FERMER TICKET ====================
+# ==================== FERMER TICKET ====================
 class CloseTicketView(discord.ui.View):
     def __init__(self, channel: discord.TextChannel):
         super().__init__(timeout=None)
@@ -33,7 +33,7 @@ class CloseTicketView(discord.ui.View):
             pass
 
 
-# ==================== SELECT MENU ====================
+# ==================== MENU SÉLECTION (JOUEURS) ====================
 class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = []
@@ -99,12 +99,14 @@ class TicketSelect(discord.ui.Select):
         await ticket_channel.send(view=close_view)
 
 
-# ==================== PANNEAU AVEC BOUTONS DE CONTRÔLE ====================
+# ==================== VUE COMPLÈTE (MENU + BOUTONS STAFF) ====================
 class TicketPanelView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
+        self.add_item(TicketSelect())
 
-    @discord.ui.button(label="Recrutement", style=discord.ButtonStyle.green, emoji="👤")
+    # Boutons de contrôle Staff
+    @discord.ui.button(label="Recrutement", style=discord.ButtonStyle.gray, emoji="👤", row=1)
     async def toggle_recrutement(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not any(role.name == STAFF_ROLE_NAME for role in interaction.user.roles):
             return await interaction.response.send_message("❌ Seul le staff peut utiliser ces boutons.", ephemeral=True)
@@ -112,10 +114,8 @@ class TicketPanelView(discord.ui.View):
         global RECRUTEMENT_ENABLED
         RECRUTEMENT_ENABLED = not RECRUTEMENT_ENABLED
         await interaction.response.edit_message(embed=self.get_embed(), view=self)
-        status = "🟢 Activé" if RECRUTEMENT_ENABLED else "🔴 Désactivé"
-        await interaction.followup.send(f"Recrutement {status}", ephemeral=True)
 
-    @discord.ui.button(label="Affilié", style=discord.ButtonStyle.green, emoji="🤝")
+    @discord.ui.button(label="Affilié", style=discord.ButtonStyle.gray, emoji="🤝", row=1)
     async def toggle_affilie(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not any(role.name == STAFF_ROLE_NAME for role in interaction.user.roles):
             return await interaction.response.send_message("❌ Seul le staff peut utiliser ces boutons.", ephemeral=True)
@@ -123,8 +123,6 @@ class TicketPanelView(discord.ui.View):
         global AFFILIE_ENABLED
         AFFILIE_ENABLED = not AFFILIE_ENABLED
         await interaction.response.edit_message(embed=self.get_embed(), view=self)
-        status = "🟢 Activé" if AFFILIE_ENABLED else "🔴 Désactivé"
-        await interaction.followup.send(f"Affilié {status}", ephemeral=True)
 
     def get_embed(self):
         return discord.Embed(
