@@ -17,6 +17,7 @@ RECRUTEMENT_ENABLED = True
 AFFILIE_ENABLED = True
 
 
+# ==================== BOUTON FERMER TICKET ====================
 class CloseTicketView(discord.ui.View):
     def __init__(self, channel: discord.TextChannel):
         super().__init__(timeout=None)
@@ -32,6 +33,7 @@ class CloseTicketView(discord.ui.View):
             pass
 
 
+# ==================== SELECT MENU ====================
 class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = []
@@ -97,42 +99,48 @@ class TicketSelect(discord.ui.Select):
         await ticket_channel.send(view=close_view)
 
 
-class TicketView(discord.ui.View):
+# ==================== PANNEAU AVEC BOUTONS DE CONTRÔLE ====================
+class TicketPanelView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
-        self.add_item(TicketSelect())
+
+    @discord.ui.button(label="Recrutement", style=discord.ButtonStyle.green, emoji="👤")
+    async def toggle_recrutement(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not any(role.name == STAFF_ROLE_NAME for role in interaction.user.roles):
+            return await interaction.response.send_message("❌ Seul le staff peut utiliser ces boutons.", ephemeral=True)
+
+        global RECRUTEMENT_ENABLED
+        RECRUTEMENT_ENABLED = not RECRUTEMENT_ENABLED
+        await interaction.response.edit_message(embed=self.get_embed(), view=self)
+        status = "🟢 Activé" if RECRUTEMENT_ENABLED else "🔴 Désactivé"
+        await interaction.followup.send(f"Recrutement {status}", ephemeral=True)
+
+    @discord.ui.button(label="Affilié", style=discord.ButtonStyle.green, emoji="🤝")
+    async def toggle_affilie(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not any(role.name == STAFF_ROLE_NAME for role in interaction.user.roles):
+            return await interaction.response.send_message("❌ Seul le staff peut utiliser ces boutons.", ephemeral=True)
+
+        global AFFILIE_ENABLED
+        AFFILIE_ENABLED = not AFFILIE_ENABLED
+        await interaction.response.edit_message(embed=self.get_embed(), view=self)
+        status = "🟢 Activé" if AFFILIE_ENABLED else "🔴 Désactivé"
+        await interaction.followup.send(f"Affilié {status}", ephemeral=True)
+
+    def get_embed(self):
+        return discord.Embed(
+            title="Centre d'assistance",
+            description="Merci de fournir le plus d'informations pour un traitement efficace.\n\n"
+                       f"**Recrutement : {'🟢 Activé' if RECRUTEMENT_ENABLED else '🔴 Désactivé'}**\n"
+                       f"**Affilié     : {'🟢 Activé' if AFFILIE_ENABLED else '🔴 Désactivé'}**",
+            color=0x2b2d31
+        )
 
 
-# ==================== COMMANDES ====================
-@bot.tree.command(name="recrutement", description="Activer/Désactiver Recrutement")
-@commands.has_permissions(administrator=True)
-async def gestion_recrutement(interaction: discord.Interaction, etat: str):
-    global RECRUTEMENT_ENABLED
-    RECRUTEMENT_ENABLED = etat.lower() in ["on", "activer", "enable", "true"]
-    status = "activé 🟢" if RECRUTEMENT_ENABLED else "désactivé 🔴"
-    await interaction.response.send_message(f"✅ Recrutement **{status}**.\n\n→ Refais `/ticket` pour actualiser le panneau.", ephemeral=False)
-
-
-@bot.tree.command(name="affilie", description="Activer/Désactiver Affilié")
-@commands.has_permissions(administrator=True)
-async def gestion_affilie(interaction: discord.Interaction, etat: str):
-    global AFFILIE_ENABLED
-    AFFILIE_ENABLED = etat.lower() in ["on", "activer", "enable", "true"]
-    status = "activé 🟢" if AFFILIE_ENABLED else "désactivé 🔴"
-    await interaction.response.send_message(f"✅ Affilié **{status}**.\n\n→ Refais `/ticket` pour actualiser le panneau.", ephemeral=False)
-
-
-@bot.tree.command(name="ticket", description="Envoie / Actualise le panneau Centre d'assistance")
+@bot.tree.command(name="ticket", description="Envoie le panneau Centre d'assistance")
 @commands.has_permissions(administrator=True)
 async def ticket(interaction: discord.Interaction):
-    embed = discord.Embed(
-        title="Centre d'assistance",
-        description="Merci de fournir le plus d'informations pour un traitement efficace.\n\n"
-                   f"**Recrutement : {'🟢 Activé' if RECRUTEMENT_ENABLED else '🔴 Désactivé'}**\n"
-                   f"**Affilié     : {'🟢 Activé' if AFFILIE_ENABLED else '🔴 Désactivé'}**",
-        color=0x2b2d31
-    )
-    await interaction.response.send_message(embed=embed, view=TicketView())
+    view = TicketPanelView()
+    await interaction.response.send_message(embed=view.get_embed(), view=view)
 
 
 @bot.event
