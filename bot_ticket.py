@@ -89,7 +89,9 @@ class TicketSelect(discord.ui.Select):
 
         if value == "recrutement":
             await asyncio.sleep(1)
-            q_embed = discord.Embed(title="📋 Questionnaire Recrutement", description="Merci de répondre à toutes les questions :\n\n1. Âge ?\n2. Disponibilités ?\n3. Expérience en ville ?\n4. Nom & Prénom IG ?\n5. Heures FiveM ?", color=0x00ff00)
+            q_embed = discord.Embed(title="📋 Questionnaire Recrutement", 
+                                  description="Merci de répondre à toutes les questions :\n\n1. Âge ?\n2. Disponibilités ?\n3. Expérience en ville ?\n4. Nom & Prénom IG ?\n5. Heures FiveM ?", 
+                                  color=0x00ff00)
             await ticket_channel.send(embed=q_embed)
 
         close_view = CloseTicketView(ticket_channel)
@@ -104,7 +106,7 @@ class TicketView(discord.ui.View):
 
 async def update_panel():
     global PANEL_MESSAGE
-    if not PANEL_MESSAGE: 
+    if not PANEL_MESSAGE:
         return
     try:
         embed = discord.Embed(
@@ -115,10 +117,12 @@ async def update_panel():
             color=0x2b2d31
         )
         await PANEL_MESSAGE.edit(embed=embed, view=TicketView())
+        print("✅ Panneau mis à jour avec succès")
     except discord.NotFound:
+        print("❌ Panneau supprimé ou introuvable")
         PANEL_MESSAGE = None
     except Exception as e:
-        print(f"Erreur update panel: {e}")
+        print(f"Erreur update_panel: {e}")
 
 
 @bot.tree.command(name="recrutement", description="Activer/Désactiver Recrutement")
@@ -126,7 +130,8 @@ async def update_panel():
 async def gestion_recrutement(interaction: discord.Interaction, etat: str):
     global RECRUTEMENT_ENABLED
     RECRUTEMENT_ENABLED = etat.lower() in ["on", "activer", "enable", "true"]
-    await interaction.response.send_message(f"✅ Recrutement **{'activé' if RECRUTEMENT_ENABLED else 'désactivé'}**.", ephemeral=True)
+    status = "activé 🟢" if RECRUTEMENT_ENABLED else "désactivé 🔴"
+    await interaction.response.send_message(f"Recrutement **{status}**.", ephemeral=True)
     await update_panel()
 
 
@@ -135,7 +140,8 @@ async def gestion_recrutement(interaction: discord.Interaction, etat: str):
 async def gestion_affilie(interaction: discord.Interaction, etat: str):
     global AFFILIE_ENABLED
     AFFILIE_ENABLED = etat.lower() in ["on", "activer", "enable", "true"]
-    await interaction.response.send_message(f"✅ Affilié **{'activé' if AFFILIE_ENABLED else 'désactivé'}**.", ephemeral=True)
+    status = "activé 🟢" if AFFILIE_ENABLED else "désactivé 🔴"
+    await interaction.response.send_message(f"Affilié **{status}**.", ephemeral=True)
     await update_panel()
 
 
@@ -152,6 +158,7 @@ async def ticket(interaction: discord.Interaction):
     )
     await interaction.response.send_message(embed=embed, view=TicketView())
     PANEL_MESSAGE = await interaction.original_response()
+    print("✅ Nouveau panneau envoyé")
 
 
 @bot.event
