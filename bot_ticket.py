@@ -14,10 +14,12 @@ TICKET_CATEGORY_ID = 1516575212559142994
 STAFF_ROLE_NAME = "tickets"
 
 # ==================== CONFIG ====================
-RECRUTEMENT_ENABLED = True   # ← Change ici si tu veux démarrer désactivé
+RECRUTEMENT_ENABLED = True
+AFFILIE_ENABLED = True
+PANEL_MESSAGE = None  # Pour mettre à jour le panneau automatiquement
 
 
-# ==================== VIEW POUR FERMER LE TICKET ====================
+# ==================== CLOSE VIEW ====================
 class CloseTicketView(discord.ui.View):
     def __init__(self, channel: discord.TextChannel):
         super().__init__(timeout=None)
@@ -25,26 +27,25 @@ class CloseTicketView(discord.ui.View):
 
     @discord.ui.button(label="Fermer le ticket", style=discord.ButtonStyle.red)
     async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("🔒 Fermeture du ticket dans 5 secondes...", ephemeral=False)
+        await interaction.response.send_message("🔒 Fermeture dans 5 secondes...", ephemeral=False)
         await asyncio.sleep(5)
-        
         try:
             await self.channel.delete()
-        except Exception:
+        except:
             pass
 
 
 # ==================== SELECT MENU DYNAMIQUE ====================
 class TicketSelect(discord.ui.Select):
     def __init__(self):
-        options = [
-            discord.SelectOption(label="Affilié", value="affilie", emoji="🤝"),
-            discord.SelectOption(label="Autre demande", value="autre", emoji="❓"),
-        ]
+        options = []
         
-        # Ajoute Recrutement seulement s'il est activé
         if RECRUTEMENT_ENABLED:
-            options.insert(0, discord.SelectOption(label="Recrutement", value="recrutement", emoji="👤"))
+            options.append(discord.SelectOption(label="Recrutement", value="recrutement", emoji="👤"))
+        if AFFILIE_ENABLED:
+            options.append(discord.SelectOption(label="Affilié", value="affilie", emoji="🤝"))
+        
+        options.append(discord.SelectOption(label="Autre demande", value="autre", emoji="❓"))
 
         super().__init__(placeholder="Sélectionner une catégorie", options=options, min_values=1, max_values=1)
 
@@ -71,16 +72,13 @@ class TicketSelect(discord.ui.Select):
             member: discord.PermissionOverwrite(read_messages=True, send_messages=True, view_channel=True),
             guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True, manage_channels=True)
         }
-
         if staff_role:
             overwrites[staff_role] = discord.PermissionOverwrite(read_messages=True, send_messages=True, view_channel=True)
 
         category = guild.get_channel(TICKET_CATEGORY_ID) if TICKET_CATEGORY_ID else None
 
         ticket_channel = await guild.create_text_channel(
-            name=ticket_name,
-            category=category,
-            overwrites=overwrites
+            name=ticket_name, category=category, overwrites=overwrites
         )
 
         await interaction.followup.send(f"✅ Ton ticket a été créé → {ticket_channel.mention}", ephemeral=True)
@@ -96,54 +94,79 @@ class TicketSelect(discord.ui.Select):
         await ticket_channel.send(embed=embed)
 
         if value == "recrutement":
-            await asyncio.sleep(1.5)
+            await asyncio.sleep(1)
             q_embed = discord.Embed(
                 title="📋 Questionnaire Recrutement",
-                description="Merci de répondre à toutes les questions :\n\n"
-                            "1. Âge ?\n2. Disponibilités ?\n3. Expérience en ville ?\n"
-                            "4. Nom & Prénom IG ?\n5. Heures FiveM ?",
+                description="Merci de répondre à toutes les questions :\n\n1. Âge ?\n2. Disponibilités ?\n3. Expérience en ville ?\n4. Nom & Prénom IG ?\n5. Heures FiveM ?",
                 color=0x00ff00
             )
             await ticket_channel.send(embed=q_embed)
 
-        # Bouton fermer
         close_view = CloseTicketView(ticket_channel)
         await ticket_channel.send(view=close_view)
 
 
-# ==================== VIEW PRINCIPALE ====================
 class TicketView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
 
 
-# ==================== COMMANDES DE GESTION RECRUTEMENT ====================
-@bot.tree.command(name="recrutement", description="Activer ou désactiver les tickets recrutement")
+# ==================== MISE À JOUR DU PANNEAU ====================
+async def update_panel():
+    global PANEL_MESSAGE
+    if not PANEL_MESSAGE:
+        return
+    try:
+        embed = discord.Embed(
+            title="Centre d'assistance",
+            description="Merci de fournir le plus d'informations pour un traitement efficace.\n\n"
+                       f"**Recrutement : {'🟢 Activé' if RECRUTEMENT_ENABLED else '🔴 Désactivé'}**\n"
+                       f"**Affilié     : {'🟢 Activé' if AFFILIE_ENABLED else '🔴 Désactivé'}**",
+            color=0x2b2d31
+        )
+        await PANEL_MESSAGE.edit(embed=embed, view=TicketView())
+    except:
+        pass
+
+
+# ==================== COMMANDES DE GESTION ====================
+@bot.tree.command(name="recrutement", description="Activer/Désactiver les tickets Recrutement")
 @commands.has_permissions(administrator=True)
 async def gestion_recrutement(interaction: discord.Interaction, etat: str):
     global RECRUTEMENT_ENABLED
-    
-    if etat.lower() in ["on", "activer", "enable"]:
-        RECRUTEMENT_ENABLED = True
-        await interaction.response.send_message("✅ Les tickets **Recrutement** sont maintenant **activés**.", ephemeral=True)
-    elif etat.lower() in ["off", "désactiver", "disable"]:
-        RECRUTEMENT_ENABLED = False
-        await interaction.response.send_message("❌ Les tickets **Recrutement** sont maintenant **désactivés**.", ephemeral=True)
-    else:
-        await interaction.response.send_message("Utilise `/recrutement on` ou `/recrutement off`", ephemeral=True)
+    RECRUTEMENT_ENABLED = etat.lower() in ["on", "activer", "enable"]
+    status = "activé" if RECRUTEMENT_ENABLED else "désactivé"
+    await interaction.response.send_message(f"✅ Recrutement **{status}**.", ephemeral=True)
+    await update_panel()
+
+
+@bot.tree.command(name="affilie", description="Activer/Désactiver les tickets Affilié")
+@commands.has_permissions(administrator=True)
+async def gestion_affilie(interaction: discord.Interaction, etat: str):
+    global AFFILIE_ENABLED
+    AFFILIE_ENABLED = etat.lower() in ["on", "activer", "enable"]
+    status = "activé" if AFFILIE_ENABLED else "désactivé"
+    await interaction.response.send_message(f"✅ Affilié **{status}**.", ephemeral=True)
+    await update_panel()
 
 
 # ==================== COMMANDE PANNEAU ====================
 @bot.tree.command(name="ticket", description="Envoie le panneau Centre d'assistance")
 @commands.has_permissions(administrator=True)
 async def ticket(interaction: discord.Interaction):
+    global PANEL_MESSAGE
+    
     embed = discord.Embed(
         title="Centre d'assistance",
-        description="Merci de fournir le plus d'informations pour un traitement efficace.",
+        description="Merci de fournir le plus d'informations pour un traitement efficace.\n\n"
+                   f"**Recrutement : {'🟢 Activé' if RECRUTEMENT_ENABLED else '🔴 Désactivé'}**\n"
+                   f"**Affilié     : {'🟢 Activé' if AFFILIE_ENABLED else '🔴 Désactivé'}**",
         color=0x2b2d31
     )
+    
     await interaction.response.send_message(embed=embed, view=TicketView())
+    PANEL_MESSAGE = await interaction.original_response()
 
 
 # ==================== ON READY ====================
@@ -152,7 +175,7 @@ async def on_ready():
     print(f"✅ {bot.user} est en ligne !")
     try:
         synced = await bot.tree.sync()
-        print(f"✅ {len(synced)} commandes slash synchronisées.")
+        print(f"✅ {len(synced)} commandes synchronisées.")
     except Exception as e:
         print(f"Erreur sync : {e}")
 
