@@ -38,67 +38,21 @@ class RecrutementModal(discord.ui.Modal, title="📋 Candidature Recrutement"):
     def __init__(self):
         super().__init__(timeout=None)
 
-        self.age = discord.ui.TextInput(
-            label="♕︎ Âge :",
-            placeholder="18",
-            required=True,
-            style=discord.TextStyle.short
-        )
-        self.heure_rp = discord.ui.TextInput(
-            label="♕︎ Heure RP (screen) :",
-            placeholder="Ex: 250h+",
-            required=True,
-            style=discord.TextStyle.short
-        )
-        self.gopro = discord.ui.TextInput(
-            label="♕︎ Possibilité de GoPro :",
-            placeholder="Oui / Non / Parfois",
-            required=True,
-            style=discord.TextStyle.short
-        )
-        self.ban = discord.ui.TextInput(
-            label="♕︎ Déjà ban ?",
-            placeholder="Oui/Non + explication",
-            required=True,
-            style=discord.TextStyle.short
-        )
-        self.dispo = discord.ui.TextInput(
-            label="♕︎ Disponibilités :",
-            placeholder="Ex: Tous les soirs 20h-00h",
-            required=True,
-            style=discord.TextStyle.short
-        )
-        self.motivations = discord.ui.TextInput(
-            label="♕︎ Motivations à nous rejoindre :",
-            placeholder="Pourquoi veux-tu rejoindre ?",
-            required=True,
-            style=discord.TextStyle.paragraph
-        )
-        self.qualites = discord.ui.TextInput(
-            label="♕︎ Qualités :",
-            placeholder="Ex: Sérieux, loyal, actif...",
-            required=True,
-            style=discord.TextStyle.paragraph
-        )
-        self.defauts = discord.ui.TextInput(
-            label="♕︎ Défauts :",
-            placeholder="Ex: Impulsif, timide en vocal...",
-            required=True,
-            style=discord.TextStyle.paragraph
-        )
+        self.age = discord.ui.TextInput(label="♕︎ Âge :", placeholder="18", required=True, style=discord.TextStyle.short)
+        self.heure_rp = discord.ui.TextInput(label="♕︎ Heure RP (screen) :", placeholder="Ex: 250h+", required=True, style=discord.TextStyle.short)
+        self.gopro = discord.ui.TextInput(label="♕︎ Possibilité de GoPro :", placeholder="Oui / Non / Parfois", required=True, style=discord.TextStyle.short)
+        self.ban = discord.ui.TextInput(label="♕︎ Déjà ban ?", placeholder="Oui/Non + explication", required=True, style=discord.TextStyle.short)
+        self.dispo = discord.ui.TextInput(label="♕︎ Disponibilités :", placeholder="Ex: Tous les soirs 20h-00h", required=True, style=discord.TextStyle.short)
+        self.motivations = discord.ui.TextInput(label="♕︎ Motivations :", placeholder="Pourquoi nous rejoindre ?", required=True, style=discord.TextStyle.paragraph)
+        self.qualites = discord.ui.TextInput(label="♕︎ Qualités :", placeholder="Sérieux, loyal...", required=True, style=discord.TextStyle.paragraph)
+        self.defauts = discord.ui.TextInput(label="♕︎ Défauts :", placeholder="Impulsif, timide...", required=True, style=discord.TextStyle.paragraph)
 
-        for item in [self.age, self.heure_rp, self.gopro, self.ban, self.dispo,
-                     self.motivations, self.qualites, self.defauts]:
+        for item in [self.age, self.heure_rp, self.gopro, self.ban, self.dispo, self.motivations, self.qualites, self.defauts]:
             self.add_item(item)
 
     async def on_submit(self, interaction: discord.Interaction):
-        embed = discord.Embed(
-            title="📋 Nouvelle Candidature Recrutement",
-            description=f"**Candidat :** {interaction.user.mention}",
-            color=0x00ff00,
-            timestamp=discord.utils.utcnow()
-        )
-
+        embed = discord.Embed(title="📋 Nouvelle Candidature Recrutement", description=f"**Candidat :** {interaction.user.mention}", color=0x00ff00, timestamp=discord.utils.utcnow())
+        
         embed.add_field(name="♕︎ Âge", value=self.age.value, inline=True)
         embed.add_field(name="♕︎ Heure RP", value=self.heure_rp.value, inline=True)
         embed.add_field(name="♕︎ GoPro", value=self.gopro.value, inline=True)
@@ -109,7 +63,7 @@ class RecrutementModal(discord.ui.Modal, title="📋 Candidature Recrutement"):
         embed.add_field(name="♕︎ Défauts", value=self.defauts.value, inline=False)
 
         await interaction.channel.send(embed=embed)
-        await interaction.response.send_message("✅ Ta candidature a été envoyée avec succès !", ephemeral=True)
+        await interaction.response.send_message("✅ Candidature envoyée !", ephemeral=True)
 
 
 # ==================== FERMER TICKET ====================
@@ -136,31 +90,30 @@ class TicketSelect(discord.ui.Select):
             discord.SelectOption(label="Affilié", value="affilie", emoji="🤝"),
             discord.SelectOption(label="Autre demande", value="autre", emoji="❓"),
         ]
-        super().__init__(placeholder="Sélectionner une catégorie", options=options, min_values=1, max_values=1)
+        super().__init__(placeholder="Sélectionner une catégorie", options=options)
 
     async def callback(self, interaction: discord.Interaction):
         value = self.values[0]
 
-        # ===================== RECRUTEMENT =====================
         if value == "recrutement":
-            if not config["recrutement"]:
-                return await interaction.response.send_message("❌ Recrutement actuellement désactivé.", ephemeral=True)
-            modal = RecrutementModal()
-            await interaction.response.send_modal(modal)
+            if not config.get("recrutement"):
+                return await interaction.response.send_message("❌ Recrutement désactivé.", ephemeral=True)
+            await interaction.response.send_modal(RecrutementModal())
             return
 
-        # ===================== AUTRES TICKETS =====================
+        # Autres tickets
         await interaction.response.defer(ephemeral=True)
         member = interaction.user
         guild = interaction.guild
 
-        cfg = {
+        cfg_map = {
             "affilie": {"name": "affilie", "emoji": "🤝", "color": 0xffaa00},
             "autre": {"name": "autre-demande", "emoji": "❓", "color": 0x7289da}
-        }[value]
+        }
+        cfg = cfg_map[value]
 
-        if value == "affilie" and not config["affilie"]:
-            return await interaction.followup.send("❌ Système affilié actuellement désactivé.", ephemeral=True)
+        if value == "affilie" and not config.get("affilie"):
+            return await interaction.followup.send("❌ Affilié désactivé.", ephemeral=True)
 
         ticket_name = f"{cfg['name']}-{member.name.lower()}"
         staff_role = discord.utils.get(guild.roles, name=STAFF_ROLE_NAME)
@@ -173,13 +126,10 @@ class TicketSelect(discord.ui.Select):
         if staff_role:
             overwrites[staff_role] = discord.PermissionOverwrite(read_messages=True, send_messages=True, view_channel=True)
 
-        category = guild.get_channel(TICKET_CATEGORY_ID) if TICKET_CATEGORY_ID else None
+        category = guild.get_channel(TICKET_CATEGORY_ID)
+        ticket_channel = await guild.create_text_channel(name=ticket_name, category=category, overwrites=overwrites)
 
-        ticket_channel = await guild.create_text_channel(
-            name=ticket_name, category=category, overwrites=overwrites
-        )
-
-        await interaction.followup.send(f"✅ Ton ticket a été créé → {ticket_channel.mention}", ephemeral=True)
+        await interaction.followup.send(f"✅ Ticket créé → {ticket_channel.mention}", ephemeral=True)
 
         embed = discord.Embed(
             title=f"{cfg['emoji']} Ticket {value.title()}",
@@ -203,25 +153,12 @@ class TicketPanelView(discord.ui.View):
         self.clear_items()
         self.add_item(TicketSelect())
 
-        self.add_item(discord.ui.Button(
-            label="Recrutement",
-            style=discord.ButtonStyle.green if config["recrutement"] else discord.ButtonStyle.red,
-            emoji="👤",
-            row=1,
-            custom_id="toggle_rec"
-        ))
-        self.add_item(discord.ui.Button(
-            label="Affilié",
-            style=discord.ButtonStyle.green if config["affilie"] else discord.ButtonStyle.red,
-            emoji="🤝",
-            row=1,
-            custom_id="toggle_aff"
-        ))
+        self.add_item(discord.ui.Button(label="Recrutement", style=discord.ButtonStyle.green if config["recrutement"] else discord.ButtonStyle.red, emoji="👤", row=1, custom_id="toggle_rec"))
+        self.add_item(discord.ui.Button(label="Affilié", style=discord.ButtonStyle.green if config["affilie"] else discord.ButtonStyle.red, emoji="🤝", row=1, custom_id="toggle_aff"))
 
     async def toggle_recrutement(self, interaction: discord.Interaction):
         if not interaction.user.guild_permissions.administrator:
-            return await interaction.response.send_message("❌ Seul un administrateur peut faire ça.", ephemeral=True)
-        
+            return await interaction.response.send_message("❌ Admin seulement.", ephemeral=True)
         config["recrutement"] = not config["recrutement"]
         save_config(config)
         self.refresh()
@@ -229,8 +166,7 @@ class TicketPanelView(discord.ui.View):
 
     async def toggle_affilie(self, interaction: discord.Interaction):
         if not interaction.user.guild_permissions.administrator:
-            return await interaction.response.send_message("❌ Seul un administrateur peut faire ça.", ephemeral=True)
-        
+            return await interaction.response.send_message("❌ Admin seulement.", ephemeral=True)
         config["affilie"] = not config["affilie"]
         save_config(config)
         self.refresh()
@@ -239,8 +175,7 @@ class TicketPanelView(discord.ui.View):
     def get_embed(self):
         return discord.Embed(
             title="Centre d'assistance",
-            description="Merci de fournir le plus d'informations pour un traitement efficace.\n\n"
-                       f"**Recrutement : {'🟢 Activé' if config['recrutement'] else '🔴 Désactivé'}**\n"
+            description=f"**Recrutement : {'🟢 Activé' if config['recrutement'] else '🔴 Désactivé'}**\n"
                        f"**Affilié : {'🟢 Activé' if config['affilie'] else '🔴 Désactivé'}**",
             color=0x2b2d31
         )
@@ -249,8 +184,10 @@ class TicketPanelView(discord.ui.View):
 @bot.tree.command(name="ticket", description="Envoie le panneau Centre d'assistance")
 @commands.has_permissions(administrator=True)
 async def ticket(interaction: discord.Interaction):
-    view = TicketPanelView()
+    # Solution au problème d'interaction
+    await interaction.response.defer(ephemeral=False)
     
+    view = TicketPanelView()
     for child in view.children:
         if isinstance(child, discord.ui.Button):
             if child.custom_id == "toggle_rec":
@@ -258,7 +195,7 @@ async def ticket(interaction: discord.Interaction):
             elif child.custom_id == "toggle_aff":
                 child.callback = view.toggle_affilie
 
-    await interaction.response.send_message(embed=view.get_embed(), view=view)
+    await interaction.followup.send(embed=view.get_embed(), view=view)
 
 
 @bot.event
@@ -274,6 +211,6 @@ async def on_ready():
 if __name__ == "__main__":
     token = os.getenv("TOKEN")
     if not token:
-        print("❌ Erreur : TOKEN non trouvé dans les variables d'environnement.")
+        print("❌ TOKEN non trouvé !")
     else:
         bot.run(token)
