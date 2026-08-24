@@ -1,17 +1,4 @@
-Le problème vient de la façon dont les boutons du panneau sont gérés.
-Cause du bug
-Quand tu cliques sur Recrutement ou Affilié :
-
-La méthode toggle_... appelle self.refresh()
-refresh() fait un clear_items() puis recrée de nouveaux boutons
-Ces nouveaux boutons n’ont plus de callback attaché
-Résultat → Discord affiche « n’a pas répondu à temps »
-
-C’est exactement ce qui s’est passé sur ton screenshot (le message a été modifié après un toggle).
-
-Code corrigé
-Voici une version propre et stable :
-Pythonimport discord
+import discord
 from discord.ext import commands
 import os
 import asyncio
