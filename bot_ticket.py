@@ -4,7 +4,8 @@ import os
 import asyncio
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, UTC
+import io
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -56,7 +57,7 @@ class CloseTicketView(discord.ui.View):
                     title="📁 Ticket fermé",
                     description=f"**Salon :** {channel.name}\n**Fermé par :** {interaction.user.mention}",
                     color=discord.Color.red(),
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.now(UTC)
                 )
                 await log_channel.send(embed=embed, file=file)
 
@@ -80,13 +81,11 @@ async def generate_transcript(channel: discord.TextChannel, closer: discord.Memb
         f"=== TRANSCRIPT TICKET ===\n"
         f"Salon : {channel.name}\n"
         f"Fermé par : {closer}\n"
-        f"Date : {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC\n"
+        f"Date : {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')} UTC\n"
         f"{'='*40}\n\n"
     )
     content = header + "\n".join(messages)
 
-    # On écrit dans un fichier temporaire en mémoire
-    import io
     file = io.BytesIO(content.encode("utf-8"))
     file.seek(0)
     return file
