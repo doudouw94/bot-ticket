@@ -44,10 +44,8 @@ class CloseTicketView(discord.ui.View):
         channel = self.channel or interaction.channel
         await interaction.response.send_message("🔒 Fermeture dans 5 secondes...", ephemeral=False)
 
-        # Génération du transcript
         transcript = await generate_transcript(channel, interaction.user)
 
-        # Envoi dans le salon de logs si configuré
         log_channel_id = config.get("log_channel_id")
         if log_channel_id:
             log_channel = interaction.guild.get_channel(log_channel_id)
@@ -70,7 +68,6 @@ class CloseTicketView(discord.ui.View):
             print(f"Erreur suppression ticket: {e}")
 
 async def generate_transcript(channel: discord.TextChannel, closer: discord.Member):
-    """Génère un transcript texte du ticket"""
     messages = []
     async for message in channel.history(limit=200, oldest_first=True):
         timestamp = message.created_at.strftime("%Y-%m-%d %H:%M:%S")
@@ -96,6 +93,7 @@ class TicketSelect(discord.ui.Select):
         options = [
             discord.SelectOption(label="Recrutement", value="recrutement", emoji="👤"),
             discord.SelectOption(label="Affilié", value="affilie", emoji="🤝"),
+            discord.SelectOption(label="Groupe indépendant", value="groupe_independant", emoji="🏴"),
             discord.SelectOption(label="Autre demande", value="autre", emoji="❓"),
         ]
         super().__init__(
@@ -115,6 +113,7 @@ class TicketSelect(discord.ui.Select):
         cfg = {
             "recrutement": {"name": "recrutement", "emoji": "👤", "color": 0x00ff00},
             "affilie": {"name": "affilie", "emoji": "🤝", "color": 0xffaa00},
+            "groupe_independant": {"name": "groupe-independant", "emoji": "🏴", "color": 0x9b59b6},
             "autre": {"name": "autre-demande", "emoji": "❓", "color": 0x7289da}
         }[value]
 
@@ -148,7 +147,7 @@ class TicketSelect(discord.ui.Select):
         await interaction.followup.send(f"✅ Ton ticket a été créé → {ticket_channel.mention}", ephemeral=True)
 
         embed = discord.Embed(
-            title=f"{cfg['emoji']} Ticket {value.title()}",
+            title=f"{cfg['emoji']} Ticket {value.replace('_', ' ').title()}",
             description=f"Bonjour {member.mention},\nUn membre du staff va te répondre bientôt.",
             color=cfg["color"]
         )
@@ -156,6 +155,7 @@ class TicketSelect(discord.ui.Select):
             embed.description += f"\n\n{staff_role.mention} un ticket a été ouvert !"
         await ticket_channel.send(embed=embed)
 
+        # Questionnaire Recrutement
         if value == "recrutement":
             recrutement_text = (
                 "Bonjour,\n"
@@ -183,6 +183,18 @@ class TicketSelect(discord.ui.Select):
                 "♕︎ 𝐃𝐞́𝐟𝐚𝐮𝐭𝐬 :"
             )
             q_embed = discord.Embed(title="📋 Questionnaire Recrutement", description=recrutement_text, color=0x00ff00)
+            await ticket_channel.send(embed=q_embed)
+
+        # Questionnaire Groupe Indépendant
+        elif value == "groupe_independant":
+            groupe_text = (
+                "**Questionnaire Groupe Indépendant**\n\n"
+                "Merci de répondre aux questions suivantes :\n\n"
+                "1. **Présentation du groupe** :\n"
+                "2. **Numéro des leads** :\n"
+                "3. **Lieu du QG** :"
+            )
+            q_embed = discord.Embed(title="🏴 Questionnaire Groupe Indépendant", description=groupe_text, color=0x9b59b6)
             await ticket_channel.send(embed=q_embed)
 
         await ticket_channel.send(view=CloseTicketView(ticket_channel))
@@ -253,7 +265,6 @@ async def on_ready():
     except Exception as e:
         print(f"Erreur sync : {e}")
 
-# ==================== LANCEMENT ====================
 if __name__ == "__main__":
     token = os.getenv("TOKEN")
     if not token:
