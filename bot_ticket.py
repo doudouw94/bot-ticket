@@ -14,9 +14,16 @@ intents.guilds = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ==================== CONFIG ====================
-TICKET_CATEGORY_ID = 1516575212559142994
 STAFF_ROLE_NAME = "tickets"
 CONFIG_FILE = Path("ticket_config.json")
+
+# Catégories par type de ticket
+CATEGORIES = {
+    "recrutement": 1564652583778517123,
+    "groupe_independant": 1564653168913023109,
+    "affilie": 1564653286479634473,
+    "autre": 1564653481825017876
+}
 
 def load_config():
     if CONFIG_FILE.exists():
@@ -133,7 +140,9 @@ class TicketSelect(discord.ui.Select):
         if staff_role:
             overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
 
-        category = guild.get_channel(TICKET_CATEGORY_ID) if TICKET_CATEGORY_ID else None
+        # Récupération de la bonne catégorie
+        category_id = CATEGORIES.get(value)
+        category = guild.get_channel(category_id) if category_id else None
 
         try:
             ticket_channel = await guild.create_text_channel(
