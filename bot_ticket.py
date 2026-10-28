@@ -130,7 +130,9 @@ class TicketSelect(discord.ui.Select):
         ticket_name = f"{cfg['name']}-{member.name.lower()}-{member.id % 10000}"
         staff_role = discord.utils.get(guild.roles, name=STAFF_ROLE_NAME)
 
+        # Permissions privées (tout le monde est bloqué sauf le membre + staff)
         overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
             member: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
             guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_channels=True)
         }
