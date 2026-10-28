@@ -17,7 +17,6 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 STAFF_ROLE_NAME = "tickets"
 CONFIG_FILE = Path("ticket_config.json")
 
-# Catégories par type de ticket
 CATEGORIES = {
     "recrutement": 1564652583778517123,
     "groupe_independant": 1564653168913023109,
@@ -89,7 +88,6 @@ async def generate_transcript(channel: discord.TextChannel, closer: discord.Memb
         f"{'='*40}\n\n"
     )
     content = header + "\n".join(messages)
-
     file = io.BytesIO(content.encode("utf-8"))
     file.seek(0)
     return file
@@ -133,14 +131,12 @@ class TicketSelect(discord.ui.Select):
         staff_role = discord.utils.get(guild.roles, name=STAFF_ROLE_NAME)
 
         overwrites = {
-            guild.default_role: discord.PermissionOverwrite(view_channel=False),
             member: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
             guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_channels=True)
         }
         if staff_role:
             overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
 
-        # Récupération de la bonne catégorie
         category_id = CATEGORIES.get(value)
         category = guild.get_channel(category_id) if category_id else None
 
@@ -164,7 +160,6 @@ class TicketSelect(discord.ui.Select):
             embed.description += f"\n\n{staff_role.mention} un ticket a été ouvert !"
         await ticket_channel.send(embed=embed)
 
-        # Questionnaire Recrutement
         if value == "recrutement":
             recrutement_text = (
                 "Bonjour,\n"
@@ -194,14 +189,18 @@ class TicketSelect(discord.ui.Select):
             q_embed = discord.Embed(title="📋 Questionnaire Recrutement", description=recrutement_text, color=0x00ff00)
             await ticket_channel.send(embed=q_embed)
 
-        # Questionnaire Groupe Indépendant
         elif value == "groupe_independant":
             groupe_text = (
                 "**Questionnaire Groupe Indépendant**\n\n"
                 "Merci de répondre aux questions suivantes :\n\n"
                 "1. **Présentation du groupe** :\n"
-                "2. **Numéro des leads** :\n"
-                "3. **Lieu du QG** :"
+                "2. **Nom du groupe** :\n"
+                "3. **Type de groupe** :\n"
+                "4. **Activité illégale** :\n"
+                "5. **Avez-vous pour objectif de passer reconnu ?** :\n"
+                "6. **Êtes-vous affilié ? Si oui, quels groupes ?** :\n"
+                "7. **Numéro des leads** :\n"
+                "8. **Lieu du QG** :"
             )
             q_embed = discord.Embed(title="🏴 Questionnaire Groupe Indépendant", description=groupe_text, color=0x9b59b6)
             await ticket_channel.send(embed=q_embed)
